@@ -21,23 +21,36 @@ final class FFmpeg: @unchecked Sendable {
     static var searchPaths: [String] {
         var paths: [String] = []
         if let custom = UserDefaults.standard.string(forKey: customPathKey), !custom.isEmpty { paths.append(custom) }
-        if let bundled = Bundle.main.url(forAuxiliaryExecutable: "ffmpeg")?.path { paths.append(bundled) }
+        // Each architecture gets its own bundled build; the slice we're running in picks its own.
+        #if arch(x86_64)
+        let bundledNames = ["ffmpeg-x86_64", "ffmpeg"]
+        #else
+        let bundledNames = ["ffmpeg", "ffmpeg-arm64"]
+        #endif
+        for name in bundledNames {
+            if let bundled = Bundle.main.url(forAuxiliaryExecutable: name)?.path { paths.append(bundled) }
+        }
         paths += ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/opt/local/bin/ffmpeg",
                   NSHomeDirectory() + "/bin/ffmpeg", NSHomeDirectory() + "/.local/bin/ffmpeg"]
         return paths
     }
 
     func refresh() {
-        let found = Self.searchPaths.first { FileManager.default.isExecutableFile(atPath: $0) }
+        var found: String?
         var encoders: Set<String> = []
         var version: String?
-        if let found {
-            let list = (try? Self.runSync(found, ["-hide_banner", "-encoders"])) ?? ""
+        for candidate in Self.searchPaths where FileManager.default.isExecutableFile(atPath: candidate) {
+            // Actually run it: a binary built for another CPU exists but can't execute.
+            guard let banner = try? Self.runSync(candidate, ["-version"]),
+                  banner.hasPrefix("ffmpeg version") else { continue }
+            found = candidate
+            version = banner.split(separator: "\n").first.map(String.init)
+            let list = (try? Self.runSync(candidate, ["-hide_banner", "-encoders"])) ?? ""
             for line in list.split(separator: "\n") {
                 let parts = line.split(separator: " ", omittingEmptySubsequences: true)
                 if parts.count >= 2, parts[0].count == 6, !parts[0].contains("=") { encoders.insert(String(parts[1])) }
             }
-            version = (try? Self.runSync(found, ["-version"]))?.split(separator: "\n").first.map(String.init)
+            break
         }
         lock.withLock {
             _path = found
@@ -46,6 +59,7 @@ final class FFmpeg: @unchecked Sendable {
         }
     }
 
+    /// Runs a short command and returns stdout. Throws if the binary can't be launched at all.
     static func runSync(_ executable: String, _ args: [String]) throws -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)

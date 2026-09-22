@@ -4,16 +4,23 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 APP="File Utilities.app"
-BUILD=.build/release
 
-echo "▸ Compiling (release)…"
-swift build -c release --arch arm64 2>&1 | grep -E "error:|Compiling|Build complete" || true
-[[ -x "$BUILD/FileUtilities" ]] || { echo "Build failed"; exit 1; }
+# Build both architectures and merge them, so the app runs on Apple silicon and Intel Macs.
+# (SwiftPM's own --arch arm64 --arch x86_64 needs full Xcode; separate builds + lipo need only the CLT.)
+ARCHES=(arm64 x86_64)
+SLICES=()
+for a in $ARCHES; do
+  echo "▸ Compiling $a (release)…"
+  swift build -c release --arch $a 2>&1 | grep -E "error:|Build complete" || true
+  slice=".build/$a-apple-macosx/release/FileUtilities"
+  [[ -x "$slice" ]] || { echo "Build failed for $a"; exit 1; }
+  SLICES+=("$slice")
+done
 
 echo "▸ Assembling app bundle…"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BUILD/FileUtilities" "$APP/Contents/MacOS/FileUtilities"
+lipo -create "${SLICES[@]}" -output "$APP/Contents/MacOS/FileUtilities"
 
 if [[ ! -f Resources/AppIcon.icns ]]; then
   echo "▸ Drawing icon…"
@@ -41,6 +48,13 @@ if [[ -n "$FFMPEG" ]]; then
   python3 Scripts/bundle_ffmpeg.py "$FFMPEG" "$APP"
 else
   echo "▸ ffmpeg not found — building without it (MKV/WebM/MP3… will be unavailable)"
+fi
+
+# Optional Intel ffmpeg: drop a statically linked x86_64 build at Resources/ffmpeg-x86_64 and it
+# ships alongside the Apple silicon one. Each slice of the app picks the build matching its own CPU.
+if [[ -x Resources/ffmpeg-x86_64 ]]; then
+  echo "▸ Bundling Intel ffmpeg…"
+  python3 Scripts/bundle_ffmpeg.py Resources/ffmpeg-x86_64 "$APP" ffmpeg-x86_64
 fi
 
 cat > "$APP/Contents/Info.plist" <<PLIST

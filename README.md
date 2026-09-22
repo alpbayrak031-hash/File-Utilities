@@ -8,7 +8,7 @@
 
 No accounts, no uploads, no subscriptions — everything runs on your Mac.
 
-[**⬇ Download the latest release**](../../releases/latest) · macOS 14 (Sonoma) or newer · Apple silicon
+[**⬇ Download the latest release**](../../releases/latest) · macOS 14 (Sonoma) or newer · Apple silicon & Intel
 
 <img src="docs/compress.png" width="820" alt="The Compress tool">
 
@@ -58,6 +58,8 @@ No accounts, no uploads, no subscriptions — everything runs on your Mac.
 
 **Dependencies: none.** ffmpeg and every library it needs are already inside the app. You don't need Homebrew, Python or Xcode to run it.
 
+**Intel Macs:** the app is a universal binary and runs natively, but the bundled ffmpeg is Apple silicon only, so the formats that rely on it (MKV, WebM, AVI, WMV, FLV, MPEG, TS, OGV, MP3, Ogg, Opus) aren't available. Everything else — all photo formats, MP4/MOV/M4V video, AAC/Apple Lossless/FLAC/WAV/AIFF audio, and every PDF tool — works exactly the same. If you have an Intel ffmpeg binary, point the app at it in **Settings → Choose ffmpeg File…** and those formats light up.
+
 ---
 
 ## Build from source
@@ -78,9 +80,13 @@ cd File-Utilities
 
 This produces `File Utilities.app` in the project folder. The script compiles the Swift sources, draws the app icon, copies in ffmpeg with all of its libraries, and ad-hoc signs the bundle.
 
+`build.sh` compiles each architecture separately and merges them with `lipo`, producing a universal app for Apple silicon and Intel. (SwiftPM's own multi-architecture mode needs full Xcode; this way the Command Line Tools are enough.)
+
 **ffmpeg while building:** `build.sh` looks for ffmpeg at `Resources/ffmpeg`, then `/opt/homebrew/bin/ffmpeg`, then `/usr/local/bin/ffmpeg`. Install it with `brew install ffmpeg` to get a complete build. Without it, the app still builds and runs — the extra formats (MKV, WebM, AVI, WMV, MP3, Ogg, Opus…) are simply unavailable, and the app says so in Settings. You can also point the app at an ffmpeg binary yourself in **Settings → Choose ffmpeg File…**
 
 To update the bundled ffmpeg later: `brew upgrade ffmpeg && ./build.sh`.
+
+**Intel ffmpeg (optional):** put a statically linked x86_64 ffmpeg at `Resources/ffmpeg-x86_64` and `build.sh` bundles it too. The app then carries both builds and each architecture picks its own automatically — it verifies a binary by running it, so a build for the wrong CPU is ignored rather than reported as working.
 
 ### Project layout
 
@@ -102,7 +108,7 @@ Built with SwiftUI, AVFoundation, Core Image, ImageIO, PDFKit and Vision. No thi
 
 ## Notes and limitations
 
-- **Apple silicon only.** `build.sh` builds for arm64; Intel Macs aren't supported.
+- **Universal binary.** Runs natively on Apple silicon and Intel. The bundled ffmpeg is Apple silicon only (Homebrew no longer publishes Intel builds of ffmpeg 9), so ffmpeg-only formats are unavailable on Intel unless you supply your own binary.
 - **WebP output isn't available.** Homebrew's ffmpeg is built without a WebP encoder, and macOS can't write WebP either. Reading WebP files works.
 - **HDR videos** are converted to standard range when you crop, rotate or resize them. Plain compression keeps HDR.
 - The app is **ad-hoc signed**, not notarized, hence the quarantine step above.

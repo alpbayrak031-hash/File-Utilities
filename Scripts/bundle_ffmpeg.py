@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Copies ffmpeg and every non-system library it needs into an .app bundle.
 
-Usage: bundle_ffmpeg.py <path/to/ffmpeg> <path/to/App.app>
+Usage: bundle_ffmpeg.py <path/to/ffmpeg> <path/to/App.app> [name-inside-bundle]
 
 Layout:  Contents/MacOS/ffmpeg  +  Contents/Frameworks/*.dylib
 All references are rewritten to @rpath/<name>, so the bundle works on Macs without Homebrew.
@@ -53,11 +53,13 @@ def resolve(ref, owner):
 
 def main():
     ffmpeg, app = os.path.realpath(sys.argv[1]), sys.argv[2]
+    # A statically linked build (no non-system dependencies) just gets copied in under its own name.
+    name = sys.argv[3] if len(sys.argv) > 3 else "ffmpeg"
     macos = os.path.join(app, "Contents", "MacOS")
     frameworks = os.path.join(app, "Contents", "Frameworks")
     os.makedirs(frameworks, exist_ok=True)
 
-    exe = os.path.join(macos, "ffmpeg")
+    exe = os.path.join(macos, name)
     shutil.copy2(ffmpeg, exe)
     os.chmod(exe, 0o755)
 
@@ -74,10 +76,10 @@ def main():
             real = resolve(ref, source)
             if real == os.path.realpath(source):
                 continue  # the library's own id
-            name = os.path.basename(ref)
+            lib_name = os.path.basename(ref)
             if real not in copied:
-                copied[real] = name
-                dest = os.path.join(frameworks, name)
+                copied[real] = lib_name
+                dest = os.path.join(frameworks, lib_name)
                 shutil.copy2(real, dest)
                 os.chmod(dest, 0o755)
                 queue.append((real, dest))
@@ -103,8 +105,14 @@ def main():
         bad = [d for d in deps(bundled) if d.startswith("/opt/") or d.startswith("/usr/local/")]
         if bad:
             raise SystemExit(f"{bundled} still references {bad}")
-    total = sum(os.path.getsize(os.path.join(frameworks, f)) for f in os.listdir(frameworks))
-    print(f"  bundled ffmpeg + {len(copied)} libraries ({total / 1_048_576:.0f} MB)")
+    size = os.path.getsize(exe) + sum(os.path.getsize(os.path.join(frameworks, copied[k])) for k in copied)
+    libs = f" + {len(copied)} libraries" if copied else " (static)"
+    print(f"  bundled {name}{libs} ({size / 1_048_576:.0f} MB, {arch_of(exe)})")
+
+
+def arch_of(path):
+    out = run("file", path)
+    return " ".join(a for a in ("arm64", "x86_64") if a in out) or "?"
 
 
 if __name__ == "__main__":

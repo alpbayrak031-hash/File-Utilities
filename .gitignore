@@ -1,0 +1,4 @@
+.build/
+File Utilities.app/
+.DS_Store
+Resources/ffmpeg

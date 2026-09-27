@@ -23,6 +23,7 @@ struct CompressOptions {
     }
 
     var pdfLevel = PDFTools.CompressLevel.balanced
+    var pdfRedrawPages = false
     var imageTarget = ImageTarget.keep
     var imageQuality = 0.75
     var stripMetadata = false
@@ -163,7 +164,9 @@ enum Jobs {
         case .pdf:
             out = Output.destination(for: url, folder: folder, suffix: o.suffix, ext: "pdf")
             let outcome = try await cleaningUp(out) {
-                try await Task.detached { try PDFTools.compress(url, to: out, level: o.pdfLevel) }.value
+                try await Task.detached {
+                    try PDFTools.compress(url, to: out, level: o.pdfLevel, allowRedrawingText: o.pdfRedrawPages)
+                }.value
             }
             progress(1)
             if case .notSmaller(let reason) = outcome {

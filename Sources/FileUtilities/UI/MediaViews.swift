@@ -35,6 +35,10 @@ struct CompressView: View {
                         ForEach(PDFTools.CompressLevel.allCases) { Text($0.rawValue).tag($0) }
                     }
                     Caption("Photos inside the PDF are re-compressed and scaled down to \(app.compressOptions.pdfLevel.dpi) dpi. Text stays sharp and selectable, and comments stay editable.")
+                    Toggle("Re-encode pages if nothing else works", isOn: $app.compressOptions.pdfRedrawPages)
+                    Caption(app.compressOptions.pdfRedrawPages
+                            ? "Only used when a PDF won't shrink any other way: its pages are redrawn as images, so text stays visible but stops being selectable."
+                            : "Turn on if a PDF refuses to shrink. Its pages get redrawn as images — smaller, but text stops being selectable.")
                 }
                 Section("Options") {
                     Toggle("Remove metadata (EXIF, location)", isOn: $app.compressOptions.stripMetadata)

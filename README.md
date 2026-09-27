@@ -37,7 +37,7 @@ No accounts, no uploads, no subscriptions — everything runs on your Mac.
 | **PDF Editor** | Type text anywhere, add sticky notes, rectangles, ellipses, lines, arrows and freehand pen strokes, and highlight, underline or strike through text. Move, recolor, resize, erase and undo. Save in place, save a copy, or export a flattened copy whose markup can't be edited. |
 | **Merge & Split** | Combine PDFs and images into one document, drag pages to reorder, rotate, duplicate, delete, extract a selection or split into parts. |
 | **PDF Convert & OCR** | Images → PDF, PDF → images at any DPI, and OCR that makes scanned PDFs searchable. Text recognition runs on-device. |
-| **Compress PDF** | In the **Compress** tool: re-compresses the photos inside a PDF and scales them to 110–200 dpi, typically cutting an image-heavy PDF to a quarter of its size. Text and vector graphics stay sharp and selectable, comments and form fields stay editable, and page rotation is preserved. |
+| **Compress PDF** | In the **Compress** tool: re-compresses the photos inside a PDF and scales them to 110–200 dpi, typically cutting an image-heavy PDF to a quarter of its size. Text and vector graphics stay sharp and selectable, comments and form fields stay editable, and page rotation is preserved. Skipped files say why (no photos inside, already compressed…), and a **Re-encode pages** option can force stubborn PDFs to shrink by redrawing their pages as images. |
 
 <div align="center">
 <img src="docs/pdf-editor.png" width="420" alt="PDF editor"> <img src="docs/resize.png" width="420" alt="Resize and rotate">

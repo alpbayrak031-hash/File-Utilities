@@ -126,6 +126,7 @@ Built with SwiftUI, AVFoundation, Core Image, ImageIO, PDFKit and Vision. No thi
 - **macOS 13 Ventura or newer**, on Apple silicon and Intel, from one universal download.
 - **Universal binary.** Runs natively on Apple silicon and Intel. The bundled ffmpeg is Apple silicon only (Homebrew no longer publishes Intel builds of ffmpeg 9), so ffmpeg-only formats are unavailable on Intel unless you supply your own binary.
 - **WebP output isn't available.** Homebrew's ffmpeg is built without a WebP encoder, and macOS can't write WebP either. Reading WebP files works.
+- **Files still in the Trash** are refused with a note: results would be written into the Trash next to them, where Finder hides them. Drag the file out first, or choose a folder under **Save to**.
 - **HDR videos** are converted to standard range when you crop, rotate or resize them. Plain compression keeps HDR.
 - The app is **ad-hoc signed**, not notarized, hence the quarantine step above.
 

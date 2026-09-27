@@ -33,6 +33,11 @@ extension URL {
     var fileSize: Int64 { Int64((try? resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0) }
     var isDirectory: Bool { (try? resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false }
     var ext: String { pathExtension.lowercased() }
+    /// Files still sitting in the Trash: writing results next to them would hide the output.
+    var isInTrash: Bool {
+        let path = standardizedFileURL.path
+        return path.contains("/.Trash/") || path.contains("/.Trashes/")
+    }
     var baseName: String { deletingPathExtension().lastPathComponent }
 }
 

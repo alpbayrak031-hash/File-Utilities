@@ -114,9 +114,17 @@ struct StripOptions {
 // MARK: - Jobs
 
 enum Jobs {
+    /// Results would land in the Trash beside the original, where Finder hides them, so ask for
+    /// somewhere to put them instead. Picking an output folder makes this fine.
+    static func checkNotInTrash(_ url: URL, folder: URL?) throws {
+        guard folder == nil, url.isInTrash else { return }
+        throw AppError("This file is in the Trash. Drag it out first, or pick a folder under “Save to”.")
+    }
+
     // MARK: Compress
 
     static func compress(_ url: URL, _ o: CompressOptions, folder: URL?, progress: @escaping ProgressHandler) async throws -> JobResult {
+        try checkNotInTrash(url, folder: folder)
         // Never compress a file this tool already produced.
         if url.baseName.hasNameSuffix(o.suffix) {
             return JobResult(output: nil, message: "Already compressed — skipped", skipped: true)
@@ -189,6 +197,7 @@ enum Jobs {
     // MARK: Convert
 
     static func convert(_ url: URL, _ o: ConvertOptions, folder: URL?, progress: @escaping ProgressHandler) async throws -> JobResult {
+        try checkNotInTrash(url, folder: folder)
         switch url.kind {
         case .image:
             guard let format = ImageFormats.format(id: o.imageFormatID), let type = format.type else {
@@ -249,6 +258,7 @@ enum Jobs {
     // MARK: Resize / crop / rotate
 
     static func transform(_ url: URL, _ o: TransformOptions, folder: URL?, progress: @escaping ProgressHandler) async throws -> JobResult {
+        try checkNotInTrash(url, folder: folder)
         let t = o.transform
         guard !t.isIdentity else { throw AppError("Nothing to change — pick a resize, crop, rotation or flip") }
         switch url.kind {
@@ -321,6 +331,7 @@ enum Jobs {
     // MARK: Audio
 
     static func audio(_ url: URL, _ o: AudioOptions, folder: URL?, progress: @escaping ProgressHandler) async throws -> JobResult {
+        try checkNotInTrash(url, folder: folder)
         let out = Output.destination(for: url, folder: folder, suffix: o.suffix, ext: o.format.ext)
         let settings = AudioSettings(format: o.format, bitrateKbps: o.bitrateKbps, sampleRate: o.sampleRate, channels: o.channels)
         try await cleaningUp(out) { try await AudioProcessor.convert(url, to: out, settings: settings, progress: progress) }
@@ -330,6 +341,7 @@ enum Jobs {
     // MARK: Metadata
 
     static func strip(_ url: URL, _ o: StripOptions, folder: URL?, progress: @escaping ProgressHandler) async throws -> JobResult {
+        try checkNotInTrash(url, folder: folder)
         let out = o.replaceOriginals
             ? url.deletingLastPathComponent().appendingPathComponent(".\(url.baseName)-\(UUID().uuidString.prefix(8))").appendingPathExtension(url.pathExtension)
             : Output.destination(for: url, folder: folder, suffix: o.suffix, ext: url.pathExtension)

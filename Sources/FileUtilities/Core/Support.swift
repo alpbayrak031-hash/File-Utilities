@@ -36,6 +36,20 @@ extension URL {
     var baseName: String { deletingPathExtension().lastPathComponent }
 }
 
+extension String {
+    /// True when this file's base name already ends with `suffix` — including the " 2", " 3"…
+    /// that unique naming adds, so a second pass doesn't re-process its own output.
+    func hasNameSuffix(_ suffix: String) -> Bool {
+        let wanted = suffix.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !wanted.isEmpty else { return false }
+        let name = lowercased()
+        if name.hasSuffix(wanted) { return true }
+        guard let range = name.range(of: wanted, options: .backwards) else { return false }
+        let trailing = name[range.upperBound...]
+        return trailing.first == " " && trailing.dropFirst().allSatisfy(\.isNumber) && trailing.count > 1
+    }
+}
+
 func formatBytes(_ bytes: Int64) -> String {
     ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
 }

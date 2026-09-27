@@ -91,7 +91,11 @@ struct BatchListView: View {
     var body: some View {
         VStack(spacing: 0) {
             if model.items.isEmpty {
-                DropZone(hint: hint, detail: detail, targeted: targeted, choose: choose)
+                DropZone(hint: hint,
+                         detail: model.ignoredCount > 0
+                            ? "Those \(model.ignoredCount) file\(model.ignoredCount == 1 ? " was" : "s were") skipped — they're already compressed."
+                            : detail,
+                         targeted: targeted, choose: choose)
             } else {
                 table
                 Divider()
@@ -150,6 +154,10 @@ struct BatchListView: View {
             if model.savedBytes > 0 {
                 Text("Saved \(formatBytes(model.savedBytes))")
                     .foregroundStyle(.green).font(.callout.weight(.medium))
+            }
+            if model.ignoredCount > 0 {
+                Text("\(model.ignoredCount) already done").foregroundStyle(.secondary).font(.callout)
+                    .help("Files already ending with the output name are skipped")
             }
             Text("\(model.items.count) file\(model.items.count == 1 ? "" : "s")").foregroundStyle(.secondary).font(.callout)
             if !model.outputs.isEmpty {

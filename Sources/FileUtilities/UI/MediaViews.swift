@@ -41,6 +41,7 @@ struct CompressView: View {
                     Toggle("Keep original if the result isn't smaller", isOn: $app.compressOptions.onlyIfSmaller)
                 }
                 OutputSection(model: app.compress, suffix: $app.compressOptions.suffix)
+                Caption("Files whose name already ends with \"\(app.compressOptions.suffix)\" are skipped, so compressing a folder twice won't shrink the same file again.")
             }
             .formStyle(.grouped)
             RunBar(model: app.compress, label: "Compress") {
@@ -48,6 +49,10 @@ struct CompressView: View {
                 app.compress.run { url, progress in try await Jobs.compress(url, options, folder: folder, progress: progress) }
             }
         }
+        // Files this tool already produced are left out, so a second pass over the same
+        // folder doesn't compress them again.
+        .onAppear { app.compress.skipNameSuffix = app.compressOptions.suffix }
+        .onChange(of: app.compressOptions.suffix) { app.compress.skipNameSuffix = app.compressOptions.suffix }
     }
 }
 

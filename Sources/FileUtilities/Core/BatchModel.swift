@@ -37,6 +37,9 @@ final class BatchModel {
     var isRunning = false
     var outputFolder: URL?
     var concurrency = 2
+    /// Files whose name already ends with this are left out — they're this tool's own output.
+    var skipNameSuffix: String?
+    private(set) var ignoredCount = 0
     let accepted: Set<MediaKind>
     private var task: Task<Void, Never>?
 
@@ -60,6 +63,10 @@ final class BatchModel {
         for url in expand(urls) where accepted.contains(url.kind) {
             let key = url.standardizedFileURL
             guard !known.contains(key) else { continue }
+            if let suffix = skipNameSuffix, url.baseName.hasNameSuffix(suffix) {
+                ignoredCount += 1
+                continue
+            }
             known.insert(key)
             items.append(BatchItem(url: url))
         }
@@ -89,6 +96,7 @@ final class BatchModel {
     func clear() {
         guard !isRunning else { return }
         items.removeAll()
+        ignoredCount = 0
     }
 
     func move(from source: IndexSet, to destination: Int) {

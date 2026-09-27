@@ -22,7 +22,7 @@ No accounts, no uploads, no subscriptions — everything runs on your Mac.
 
 | Tool | What it's for |
 |---|---|
-| **Compress** | Makes photos, videos **and PDFs** take less space while keeping the same resolution, frame rate and page size. Keeps the original if the result isn't actually smaller. |
+| **Compress** | Makes photos, videos **and PDFs** take less space while keeping the same resolution, frame rate and page size. Keeps the original if the result isn't actually smaller, and skips files it already compressed, so you can re-run it on a folder safely. |
 | **Convert** | Photos: JPEG, PNG, HEIC, AVIF, TIFF, GIF, BMP, JPEG 2000, TGA, PSD, OpenEXR. Videos: MP4, MOV, M4V, MKV, WebM, AVI, WMV, FLV, MPEG, TS, OGV, 3GP and animated GIF. When only the container changes, streams are copied with no quality loss. |
 | **Resize & Rotate** | Batch resize, crop to an aspect ratio or custom edges, rotate and flip — with a live before/after preview. |
 | **Trim & Clip** | Cut a section out of a video (lossless fast mode), extract the audio, make a GIF, or save the current frame as an image. |

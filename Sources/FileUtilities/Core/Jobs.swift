@@ -116,6 +116,10 @@ enum Jobs {
     // MARK: Compress
 
     static func compress(_ url: URL, _ o: CompressOptions, folder: URL?, progress: @escaping ProgressHandler) async throws -> JobResult {
+        // Never compress a file this tool already produced.
+        if url.baseName.hasNameSuffix(o.suffix) {
+            return JobResult(output: nil, message: "Already compressed — skipped", skipped: true)
+        }
         let out: URL
         switch url.kind {
         case .image:

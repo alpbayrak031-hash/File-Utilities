@@ -3,7 +3,7 @@ import ImageIO
 import SwiftUI
 
 struct MetadataView: View {
-    @Bindable var app: AppState
+    @ObservedObject var app: AppState
     @State private var mode = 0
     @State private var inspecting: InspectTarget?
 
@@ -145,7 +145,7 @@ struct MetadataInspector: View {
 // MARK: - Rename
 
 struct RenameView: View {
-    @Bindable var model: RenameModel
+    @ObservedObject var model: RenameModel
     @State private var targeted = false
 
     private let tokens = [("{name}", "Original name"), ("{n}", "Counter"), ("{date}", "Capture date"), ("{time}", "Capture time"),
@@ -220,14 +220,14 @@ struct RenameView: View {
                 }
             }
             .formStyle(.grouped)
-            .onChange(of: model.pattern) { model.refresh() }
-            .onChange(of: model.start) { model.refresh() }
-            .onChange(of: model.padding) { model.refresh() }
-            .onChange(of: model.sort) { model.refresh() }
-            .onChange(of: model.find) { model.refresh() }
-            .onChange(of: model.replace) { model.refresh() }
-            .onChange(of: model.caseMode) { model.refresh() }
-            .onChange(of: model.dateFormat) { model.refresh() }
+            .onChange(of: model.pattern) { _ in model.refresh() }
+            .onChange(of: model.start) { _ in model.refresh() }
+            .onChange(of: model.padding) { _ in model.refresh() }
+            .onChange(of: model.sort) { _ in model.refresh() }
+            .onChange(of: model.find) { _ in model.refresh() }
+            .onChange(of: model.replace) { _ in model.refresh() }
+            .onChange(of: model.caseMode) { _ in model.refresh() }
+            .onChange(of: model.dateFormat) { _ in model.refresh() }
             VStack(spacing: 8) {
                 Divider()
                 HStack {

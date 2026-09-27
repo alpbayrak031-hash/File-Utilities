@@ -1,11 +1,11 @@
 import AVFoundation
 import AVKit
-import Observation
+import Combine
 import SwiftUI
 import UniformTypeIdentifiers
 
-@Observable @MainActor
-final class TrimModel {
+@MainActor
+final class TrimModel: ObservableObject {
     enum ClipMode: String, CaseIterable, Identifiable {
         case fast = "Fast (no quality loss)"
         case hevc = "Re-encode HEVC"
@@ -13,20 +13,20 @@ final class TrimModel {
         var id: Self { self }
     }
 
-    var url: URL?
-    var player: AVPlayer?
-    var duration = 0.0
-    var start = 0.0
-    var end = 0.0
-    var hasAudio = false
-    var clipMode = ClipMode.fast
-    var audioFormat = AudioFormat.aac
-    var gifFPS = 12.0
-    var gifWidth = 480.0
-    var isWorking = false
-    var progress = 0.0
-    var status = ""
-    var lastOutput: URL?
+    @Published var url: URL?
+    @Published var player: AVPlayer?
+    @Published var duration = 0.0
+    @Published var start = 0.0
+    @Published var end = 0.0
+    @Published var hasAudio = false
+    @Published var clipMode = ClipMode.fast
+    @Published var audioFormat = AudioFormat.aac
+    @Published var gifFPS = 12.0
+    @Published var gifWidth = 480.0
+    @Published var isWorking = false
+    @Published var progress = 0.0
+    @Published var status = ""
+    @Published var lastOutput: URL?
     private var task: Task<Void, Never>?
 
     var range: CMTimeRange {
@@ -156,8 +156,8 @@ struct PlayerView: NSViewRepresentable {
 }
 
 struct TrimView: View {
-    @Bindable var app: AppState
-    @Bindable var model: TrimModel
+    @ObservedObject var app: AppState
+    @ObservedObject var model: TrimModel
     @State private var targeted = false
 
     var body: some View {
@@ -249,7 +249,7 @@ struct TrimView: View {
             Text(formatDuration(value.wrappedValue)).monospacedDigit().frame(width: 70, alignment: .trailing)
             Button("Use Playhead", action: set).controlSize(.small)
         }
-        .onChange(of: value.wrappedValue) {
+        .onChange(of: value.wrappedValue) { _ in
             if model.start > model.end - 0.05 {
                 if label == "Start" { model.start = max(0, model.end - 0.05) } else { model.end = min(model.duration, model.start + 0.05) }
             }

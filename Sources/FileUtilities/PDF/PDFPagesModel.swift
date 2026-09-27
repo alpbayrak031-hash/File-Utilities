@@ -1,9 +1,9 @@
 import AppKit
-import Observation
+import Combine
 import PDFKit
 
-@Observable @MainActor
-final class PDFPagesModel {
+@MainActor
+final class PDFPagesModel: ObservableObject {
     struct PageItem: Identifiable {
         let id = UUID()
         var page: PDFPage
@@ -11,9 +11,9 @@ final class PDFPagesModel {
         var source: String
     }
 
-    var pages: [PageItem] = []
-    var selection: Set<UUID> = []
-    var status = ""
+    @Published var pages: [PageItem] = []
+    @Published var selection: Set<UUID> = []
+    @Published var status = ""
     private var anchor: UUID?
 
     var selectedIndices: [Int] { pages.indices.filter { selection.contains(pages[$0].id) } }

@@ -1,5 +1,5 @@
 import Foundation
-import Observation
+import Combine
 
 typealias ProgressHandler = @Sendable (Double) -> Void
 
@@ -11,18 +11,18 @@ struct JobResult {
 
 typealias BatchJob = @Sendable (URL, @escaping ProgressHandler) async throws -> JobResult
 
-@Observable @MainActor
-final class BatchItem: Identifiable {
+@MainActor
+final class BatchItem: ObservableObject, Identifiable {
     enum Status { case pending, running, done, skipped, failed }
 
     let id = UUID()
     let url: URL
     let originalSize: Int64
-    var status: Status = .pending
-    var progress: Double = 0
-    var output: URL?
-    var outputSize: Int64 = 0
-    var message = ""
+    @Published var status: Status = .pending
+    @Published var progress: Double = 0
+    @Published var output: URL?
+    @Published var outputSize: Int64 = 0
+    @Published var message = ""
 
     init(url: URL) {
         self.url = url
@@ -31,15 +31,15 @@ final class BatchItem: Identifiable {
 }
 
 /// A list of input files plus a job runner with limited concurrency.
-@Observable @MainActor
-final class BatchModel {
-    var items: [BatchItem] = []
-    var isRunning = false
-    var outputFolder: URL?
-    var concurrency = 2
+@MainActor
+final class BatchModel: ObservableObject {
+    @Published var items: [BatchItem] = []
+    @Published var isRunning = false
+    @Published var outputFolder: URL?
+    @Published var concurrency = 2
     /// Files whose name already ends with this are left out — they're this tool's own output.
-    var skipNameSuffix: String?
-    private(set) var ignoredCount = 0
+    @Published var skipNameSuffix: String?
+    @Published private(set) var ignoredCount = 0
     let accepted: Set<MediaKind>
     private var task: Task<Void, Never>?
 
@@ -141,7 +141,10 @@ final class BatchModel {
         task = Task { [weak self] in
             do {
                 let output = try await job(items.map(\.url)) { value in
-                    Task { @MainActor in for item in items where item.status == .running { item.progress = value } }
+                    Task { @MainActor in
+                        for item in items where item.status == .running { item.progress = value }
+                        self?.itemChanged()
+                    }
                 }
                 for item in items { item.status = .done; item.progress = 1 }
                 completion(.success(output))
@@ -158,13 +161,20 @@ final class BatchModel {
         }
     }
 
+    /// The per-file totals shown in the footer and the Start bar are derived from the items,
+    /// so a change inside one has to be announced by the list itself.
+    private func itemChanged() { objectWillChange.send() }
+
     private func process(_ item: BatchItem, _ job: BatchJob) async {
         guard !Task.isCancelled else { return }
         item.status = .running
+        itemChanged()
         do {
             let result = try await job(item.url) { value in
                 Task { @MainActor in
-                    if item.status == .running { item.progress = value }
+                    guard item.status == .running else { return }
+                    item.progress = value
+                    self.itemChanged()
                 }
             }
             item.output = result.output
@@ -179,6 +189,7 @@ final class BatchModel {
             item.status = .failed
             item.message = error.localizedDescription
         }
+        itemChanged()
     }
 
     func cancel() {

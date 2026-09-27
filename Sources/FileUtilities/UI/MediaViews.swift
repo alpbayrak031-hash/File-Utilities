@@ -5,7 +5,7 @@ import SwiftUI
 // MARK: - Compress
 
 struct CompressView: View {
-    @Bindable var app: AppState
+    @ObservedObject var app: AppState
 
     var body: some View {
         ToolLayout(title: "Compress", subtitle: "Make photos, videos and PDFs smaller — same resolution, same page size.",
@@ -52,14 +52,14 @@ struct CompressView: View {
         // Files this tool already produced are left out, so a second pass over the same
         // folder doesn't compress them again.
         .onAppear { app.compress.skipNameSuffix = app.compressOptions.suffix }
-        .onChange(of: app.compressOptions.suffix) { app.compress.skipNameSuffix = app.compressOptions.suffix }
+        .onChange(of: app.compressOptions.suffix) { _ in app.compress.skipNameSuffix = app.compressOptions.suffix }
     }
 }
 
 // MARK: - Convert
 
 struct ConvertView: View {
-    @Bindable var app: AppState
+    @ObservedObject var app: AppState
 
     var body: some View {
         let imageFormats = ImageFormats.all()
@@ -114,7 +114,7 @@ struct ConvertView: View {
 // MARK: - Resize & rotate
 
 struct TransformView: View {
-    @Bindable var app: AppState
+    @ObservedObject var app: AppState
 
     var body: some View {
         ToolLayout(title: "Resize & Rotate", subtitle: "Resize, crop, rotate and flip photos and videos in batches.",
@@ -284,7 +284,7 @@ struct TransformPreview: View {
 // MARK: - Merge
 
 struct MergeView: View {
-    @Bindable var app: AppState
+    @ObservedObject var app: AppState
     @State private var status = ""
 
     var body: some View {
@@ -336,7 +336,7 @@ struct MergeView: View {
 // MARK: - Audio
 
 struct AudioView: View {
-    @Bindable var app: AppState
+    @ObservedObject var app: AppState
 
     var body: some View {
         let format = app.audioOptions.format

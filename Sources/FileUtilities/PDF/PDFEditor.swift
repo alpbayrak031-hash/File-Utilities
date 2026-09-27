@@ -1,5 +1,5 @@
 import AppKit
-import Observation
+import Combine
 import PDFKit
 import SwiftUI
 
@@ -54,27 +54,27 @@ struct TextEditRequest: Identifiable {
     var text: String
 }
 
-@Observable @MainActor
-final class PDFEditorModel {
-    var document: PDFDocument?
-    var fileURL: URL?
-    var tool: AnnotationTool = .select
-    var strokeColor: Color = .red
-    var fillEnabled = false
-    var fillColor: Color = .yellow.opacity(0.35)
-    var highlightColor: Color = .yellow
-    var lineWidth: Double = 3
-    var fontSize: Double = 18
-    var fontName = "Helvetica"
-    var showThumbnails = true
-    var isDirty = false
-    var textEdit: TextEditRequest?
-    var errorMessage: String?
+@MainActor
+final class PDFEditorModel: ObservableObject {
+    @Published var document: PDFDocument?
+    @Published var fileURL: URL?
+    @Published var tool: AnnotationTool = .select
+    @Published var strokeColor: Color = .red
+    @Published var fillEnabled = false
+    @Published var fillColor: Color = .yellow.opacity(0.35)
+    @Published var highlightColor: Color = .yellow
+    @Published var lineWidth: Double = 3
+    @Published var fontSize: Double = 18
+    @Published var fontName = "Helvetica"
+    @Published var showThumbnails = true
+    @Published var isDirty = false
+    @Published var textEdit: TextEditRequest?
+    @Published var errorMessage: String?
     /// Bumped whenever the selected annotation or its properties change, so the inspector refreshes.
-    var revision = 0
-    private(set) var selected: PDFAnnotation?
+    @Published var revision = 0
+    @Published private(set) var selected: PDFAnnotation?
 
-    @ObservationIgnored weak var pdfView: AnnotatingPDFView?
+    weak var pdfView: AnnotatingPDFView?
 
     var title: String { fileURL?.lastPathComponent ?? "Untitled" }
 

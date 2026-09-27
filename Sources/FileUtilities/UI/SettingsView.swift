@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @Bindable var app: AppState
+    @ObservedObject var app: AppState
     @State private var customPath = UserDefaults.standard.string(forKey: FFmpeg.customPathKey) ?? ""
 
     var body: some View {

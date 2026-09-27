@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 // MARK: - Editor
 
 struct PDFEditorView: View {
-    @Bindable var model: PDFEditorModel
+    @ObservedObject var model: PDFEditorModel
     @State private var targeted = false
 
     var body: some View {
@@ -120,12 +120,12 @@ struct PDFEditorView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 7)
         .fixedSize(horizontal: false, vertical: true)
-        .background(.background.secondary)
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 }
 
 struct AnnotationInspector: View {
-    @Bindable var model: PDFEditorModel
+    @ObservedObject var model: PDFEditorModel
 
     var body: some View {
         let _ = model.revision
@@ -217,7 +217,7 @@ struct TextEditSheet: View {
 // MARK: - Pages (merge, split, reorder)
 
 struct PDFPagesView: View {
-    @Bindable var model: PDFPagesModel
+    @ObservedObject var model: PDFPagesModel
     @State private var targeted = false
     @State private var splitEvery = 1
 
@@ -330,7 +330,7 @@ struct PDFPagesView: View {
 // MARK: - Convert & OCR
 
 struct PDFConvertView: View {
-    @Bindable var app: AppState
+    @ObservedObject var app: AppState
     @State private var mode = 0
     @State private var pageSize = PDFTools.PageSize.a4
     @State private var margin = 0.0

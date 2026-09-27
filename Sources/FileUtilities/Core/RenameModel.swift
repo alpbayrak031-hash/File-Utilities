@@ -1,9 +1,9 @@
 import AVFoundation
 import ImageIO
-import Observation
+import Combine
 
-@Observable @MainActor
-final class RenameModel {
+@MainActor
+final class RenameModel: ObservableObject {
     enum CaseMode: String, CaseIterable, Identifiable {
         case keep = "Keep", lower = "lowercase", upper = "UPPERCASE", title = "Title Case"
         var id: Self { self }
@@ -23,19 +23,19 @@ final class RenameModel {
         var changed: Bool { newName != url.lastPathComponent }
     }
 
-    var files: [URL] = []
-    var dates: [URL: Date] = [:]
-    var rows: [Row] = []
+    @Published var files: [URL] = []
+    @Published var dates: [URL: Date] = [:]
+    @Published var rows: [Row] = []
     var pattern = "{name}"
-    var start = 1
-    var padding = 3
-    var find = ""
-    var replace = ""
-    var caseMode = CaseMode.keep
-    var sort = SortOrder.added
-    var dateFormat = "yyyy-MM-dd"
-    var lastRenames: [(from: URL, to: URL)] = []
-    var status = ""
+    @Published var start = 1
+    @Published var padding = 3
+    @Published var find = ""
+    @Published var replace = ""
+    @Published var caseMode = CaseMode.keep
+    @Published var sort = SortOrder.added
+    @Published var dateFormat = "yyyy-MM-dd"
+    @Published var lastRenames: [(from: URL, to: URL)] = []
+    @Published var status = ""
 
     var hasConflicts: Bool { rows.contains { $0.conflict } }
     var changeCount: Int { rows.filter(\.changed).count }

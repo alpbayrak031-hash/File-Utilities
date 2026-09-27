@@ -8,7 +8,7 @@
 
 No accounts, no uploads, no subscriptions — everything runs on your Mac.
 
-[**⬇ Download the latest release**](../../releases/latest) · macOS 14 (Sonoma) or newer · Apple silicon & Intel
+[**⬇ Download the latest release**](../../releases/latest) · macOS 13 Ventura or newer · Apple silicon & Intel
 
 <img src="docs/compress.png" width="820" alt="The Compress tool">
 
@@ -44,6 +44,20 @@ No accounts, no uploads, no subscriptions — everything runs on your Mac.
 </div>
 
 ---
+
+## Which download do I need?
+
+One download covers every supported Mac — there's no separate file to pick.
+
+| Your macOS (Apple menu → About This Mac) | Download |
+|---|---|
+| macOS 26 Tahoe | **File-Utilities.zip** from the [latest release](../../releases/latest) |
+| macOS 15 Sequoia | **File-Utilities.zip** from the [latest release](../../releases/latest) |
+| macOS 14 Sonoma | **File-Utilities.zip** from the [latest release](../../releases/latest) |
+| macOS 13 Ventura | **File-Utilities.zip** from the [latest release](../../releases/latest) — supported since v1.1 |
+| macOS 12 Monterey or older | Not supported |
+
+The same file runs on both Apple silicon and Intel Macs. Releases **v1.0.3 and earlier need macOS 14 or newer**, so on Ventura use v1.1 or later.
 
 ## Install
 
@@ -109,6 +123,7 @@ Built with SwiftUI, AVFoundation, Core Image, ImageIO, PDFKit and Vision. No thi
 
 ## Notes and limitations
 
+- **macOS 13 Ventura or newer**, on Apple silicon and Intel, from one universal download.
 - **Universal binary.** Runs natively on Apple silicon and Intel. The bundled ffmpeg is Apple silicon only (Homebrew no longer publishes Intel builds of ffmpeg 9), so ffmpeg-only formats are unavailable on Intel unless you supply your own binary.
 - **WebP output isn't available.** Homebrew's ffmpeg is built without a WebP encoder, and macOS can't write WebP either. Reading WebP files works.
 - **HDR videos** are converted to standard range when you crop, rotate or resize them. Plain compression keeps HDR.

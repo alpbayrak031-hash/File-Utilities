@@ -20,7 +20,7 @@ struct ToolLayout<Main: View, Side: View>: View {
                 Divider()
                 VStack(spacing: 0) { side() }
                     .frame(width: 340)
-                    .background(.background.secondary)
+                    .background(Color(nsColor: .windowBackgroundColor))
             }
         }
     }
@@ -81,7 +81,7 @@ struct DropZone: View {
 // MARK: - Batch list
 
 struct BatchListView: View {
-    @Bindable var model: BatchModel
+    @ObservedObject var model: BatchModel
     var hint = "Drop files or folders here"
     var detail = "Folders are scanned for supported files."
     var inspect: ((URL) -> Void)?
@@ -174,8 +174,28 @@ struct BatchListView: View {
     }
 }
 
+struct OrderedFileRow: View {
+    @ObservedObject var item: BatchItem
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "line.3.horizontal").foregroundStyle(.tertiary)
+            Image(nsImage: NSWorkspace.shared.icon(forFile: item.url.path)).resizable().frame(width: 20, height: 20)
+            Text(item.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
+            Spacer()
+            if item.status == .running {
+                ProgressView(value: item.progress).frame(width: 90)
+            } else if item.status == .failed {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red).help(item.message)
+            }
+            Text(formatBytes(item.originalSize)).foregroundStyle(.secondary).monospacedDigit()
+        }
+        .padding(.vertical, 2)
+    }
+}
+
 struct StatusCell: View {
-    let item: BatchItem
+    @ObservedObject var item: BatchItem
 
     var body: some View {
         switch item.status {
@@ -210,7 +230,7 @@ struct StatusCell: View {
 // MARK: - Options helpers
 
 struct OutputSection: View {
-    @Bindable var model: BatchModel
+    @ObservedObject var model: BatchModel
     var suffix: Binding<String>?
 
     var body: some View {
@@ -269,7 +289,7 @@ struct FFmpegNotice: View {
 }
 
 struct RunBar: View {
-    @Bindable var model: BatchModel
+    @ObservedObject var model: BatchModel
     let label: String
     var disabled = false
     let start: () -> Void
@@ -306,7 +326,7 @@ struct RunBar: View {
 // MARK: - Reorderable file list (merge, images → PDF)
 
 struct OrderedFileList: View {
-    @Bindable var model: BatchModel
+    @ObservedObject var model: BatchModel
     var hint: String
     var detail: String
     @State private var targeted = false
@@ -318,22 +338,8 @@ struct OrderedFileList: View {
                 DropZone(hint: hint, detail: detail, targeted: targeted) { model.add(Panels.openFiles()) }
             } else {
                 List(selection: $selection) {
-                    ForEach(model.items) { item in
-                        HStack(spacing: 10) {
-                            Image(systemName: "line.3.horizontal").foregroundStyle(.tertiary)
-                            Image(nsImage: NSWorkspace.shared.icon(forFile: item.url.path)).resizable().frame(width: 20, height: 20)
-                            Text(item.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
-                            Spacer()
-                            if item.status == .running {
-                                ProgressView(value: item.progress).frame(width: 90)
-                            } else if item.status == .failed {
-                                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red).help(item.message)
-                            }
-                            Text(formatBytes(item.originalSize)).foregroundStyle(.secondary).monospacedDigit()
-                        }
-                        .padding(.vertical, 2)
-                    }
-                    .onMove { model.move(from: $0, to: $1) }
+                    ForEach(model.items) { OrderedFileRow(item: $0) }
+                        .onMove { model.move(from: $0, to: $1) }
                 }
                 .onDeleteCommand { model.remove(selection) }
                 Divider()

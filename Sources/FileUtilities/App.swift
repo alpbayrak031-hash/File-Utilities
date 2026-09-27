@@ -1,11 +1,11 @@
 import AppKit
-import Observation
+import Combine
 import SwiftUI
 
 @main
 struct FileUtilitiesApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @State private var app = AppState()
+    @StateObject private var app = AppState()
 
     var body: some Scene {
         WindowGroup("File Utilities") {
@@ -87,31 +87,31 @@ enum Tool: String, CaseIterable, Identifiable, Hashable {
 }
 
 /// Holds every tool's state so switching tabs never loses work.
-@Observable @MainActor
-final class AppState {
-    var selection: Tool? = .compress
-    var ffmpegAvailable = FFmpeg.shared.isAvailable
+@MainActor
+final class AppState: ObservableObject {
+    @Published var selection: Tool? = .compress
+    @Published var ffmpegAvailable = FFmpeg.shared.isAvailable
 
     let compress = BatchModel(accepted: [.image, .video, .pdf])
-    var compressOptions = CompressOptions()
+    @Published var compressOptions = CompressOptions()
 
     let convert = BatchModel(accepted: [.image, .video])
-    var convertOptions = ConvertOptions()
+    @Published var convertOptions = ConvertOptions()
 
     let transform = BatchModel(accepted: [.image, .video])
-    var transformOptions = TransformOptions()
+    @Published var transformOptions = TransformOptions()
 
     let trim = TrimModel()
 
     let merge = BatchModel(accepted: [.video])
-    var mergeCodec = VideoCodec.hevc
-    var mergeContainer = VideoContainer.mp4
+    @Published var mergeCodec = VideoCodec.hevc
+    @Published var mergeContainer = VideoContainer.mp4
 
     let audio = BatchModel(accepted: [.audio, .video])
-    var audioOptions = AudioOptions()
+    @Published var audioOptions = AudioOptions()
 
     let strip = BatchModel(accepted: [.image, .video])
-    var stripOptions = StripOptions()
+    @Published var stripOptions = StripOptions()
     let rename = RenameModel()
 
     let pdfEditor = PDFEditorModel()
@@ -131,7 +131,7 @@ final class AppState {
 }
 
 struct ContentView: View {
-    @Bindable var app: AppState
+    @ObservedObject var app: AppState
 
     var body: some View {
         NavigationSplitView {
@@ -151,10 +151,13 @@ struct ContentView: View {
             detail
                 .navigationTitle(app.selection?.title ?? "File Utilities")
         }
-        .onChange(of: app.selection, initial: true) {
-            // Don't let the first text field grab focus (it scrolls the options panel).
-            DispatchQueue.main.async { NSApp.keyWindow?.makeFirstResponder(nil) }
-        }
+        .onAppear { clearFocus() }
+        .onChange(of: app.selection) { _ in clearFocus() }
+    }
+
+    /// Stops the first text field grabbing focus, which scrolls the options panel.
+    private func clearFocus() {
+        DispatchQueue.main.async { NSApp.keyWindow?.makeFirstResponder(nil) }
     }
 
     private func row(_ tool: Tool) -> some View {

@@ -162,10 +162,17 @@ enum Jobs {
             }
         case .pdf:
             out = Output.destination(for: url, folder: folder, suffix: o.suffix, ext: "pdf")
-            try await cleaningUp(out) {
+            let outcome = try await cleaningUp(out) {
                 try await Task.detached { try PDFTools.compress(url, to: out, level: o.pdfLevel) }.value
             }
             progress(1)
+            if case .notSmaller(let reason) = outcome {
+                try? FileManager.default.removeItem(at: out)
+                return JobResult(output: nil, message: reason, skipped: true)
+            }
+            if case .compressed(let note) = outcome, let note, o.onlyIfSmaller, out.fileSize < url.fileSize {
+                return JobResult(output: out, message: note)
+            }
         default:
             throw AppError("Unsupported file type")
         }

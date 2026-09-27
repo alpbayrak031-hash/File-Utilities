@@ -56,13 +56,48 @@ enum PDFTools {
         var dpi: Int { [.high: 200, .balanced: 150, .small: 110][self]! }
     }
 
+    enum CompressOutcome {
+        case compressed(note: String?)
+        /// Nothing worth saving; `reason` explains why, in words worth showing the user.
+        case notSmaller(reason: String)
+    }
+
     /// Recompresses the images inside a PDF. Text and vector graphics stay sharp, annotations stay editable.
-    static func compress(_ src: URL, to dst: URL, level: CompressLevel) throws {
+    @discardableResult
+    static func compress(_ src: URL, to dst: URL, level: CompressLevel) throws -> CompressOutcome {
         guard let source = PDFDocument(url: src) else { throw AppError("Can't open this PDF") }
         guard !source.isLocked else { throw AppError("This PDF is password-protected") }
         guard let content = CGPDFDocument(src as CFURL), content.numberOfPages > 0 else {
             throw AppError("Can't read this PDF")
         }
+        let images = imageCount(in: content)
+        let hasText = !(source.string ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let originalSize = src.fileSize
+
+        // A saving of a few bytes isn't worth a second copy of the file.
+        let worthwhile = Int64(Double(originalSize) * 0.97)
+
+        try filterPages(of: content, to: dst, level: level, source: source)
+        if dst.fileSize < worthwhile { return .compressed(note: nil) }
+
+        // Nothing gained. A scan can still be shrunk by re-encoding the pages themselves;
+        // a text-only PDF has nothing to squeeze in the first place.
+        guard images > 0 else {
+            return .notSmaller(reason: "No photos inside — already compact")
+        }
+        if !hasText {
+            try rasterize(source, to: dst, level: level)
+            if dst.fileSize < worthwhile {
+                return .compressed(note: "Scanned pages re-encoded")
+            }
+        }
+        return .notSmaller(reason: hasText
+            ? "Photos inside are already compressed"
+            : "Already as small as it gets")
+    }
+
+    /// Redraws every page through a Quartz filter that re-encodes the images it meets.
+    private static func filterPages(of content: CGPDFDocument, to dst: URL, level: CompressLevel, source: PDFDocument) throws {
         let filterProperties: [AnyHashable: Any] = [
             "Name": "File Utilities Compress",
             "FilterType": 1,
@@ -100,7 +135,12 @@ enum PDFTools {
         }
         ctx.closePDF()
 
-        // Restore each page's rotation and move the annotations across so they stay editable.
+        // Rotation and annotations need PDFKit to write them back. That re-save can undo some of
+        // the saving, so only do it when this document actually has something to restore.
+        let needsRotation = rotations.contains { $0 % 360 != 0 }
+        let annotated = (0..<source.pageCount).contains { source.page(at: $0)?.annotations.isEmpty == false }
+        guard needsRotation || annotated else { return }
+
         guard let result = PDFDocument(url: dst) else { throw AppError("Couldn't finish the PDF") }
         for index in 0..<result.pageCount {
             guard let page = result.page(at: index) else { continue }
@@ -113,6 +153,84 @@ enum PDFTools {
         }
         result.documentAttributes = source.documentAttributes
         guard result.write(to: dst) else { throw AppError("Couldn't save the compressed PDF") }
+    }
+
+    /// Last resort for scans: draw each page as a JPEG. Only used when there's no text to lose.
+    private static func rasterize(_ source: PDFDocument, to dst: URL, level: CompressLevel) throws {
+        try? FileManager.default.removeItem(at: dst)
+        var defaultBox = CGRect(x: 0, y: 0, width: 612, height: 792)
+        guard let ctx = CGContext(dst as CFURL, mediaBox: &defaultBox, nil) else { throw AppError("Couldn't create the PDF") }
+        for index in 0..<source.pageCount {
+            try Task.checkCancellation()
+            guard let page = source.page(at: index) else { continue }
+            let size = displaySize(of: page)
+            var box = CGRect(origin: .zero, size: size)
+            ctx.beginPage(mediaBox: &box)
+            if let rendered = render(page, dpi: CGFloat(level.dpi)), let jpeg = jpegCopy(rendered, quality: level.quality) {
+                ctx.draw(jpeg, in: box)
+            }
+            ctx.endPage()
+        }
+        ctx.closePDF()
+    }
+
+    /// Round-trips an image through JPEG so Quartz embeds the compressed data.
+    private static func jpegCopy(_ image: CGImage, quality: Double) -> CGImage? {
+        let data = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(dest, image, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
+        guard CGImageDestinationFinalize(dest), let source = CGImageSourceCreateWithData(data, nil) else { return nil }
+        return CGImageSourceCreateImageAtIndex(source, 0, nil)
+    }
+
+    /// How many image objects the document draws — 0 means there's nothing for compression to work on.
+    static func imageCount(in document: CGPDFDocument) -> Int {
+        /// Shared with the C callback, which can't capture context of its own.
+        final class Scan {
+            var images = 0
+            var queue: [CGPDFDictionaryRef] = []   // resource dictionaries still to look at
+        }
+        let scan = Scan()
+
+        func enqueueResources(_ resources: CGPDFDictionaryRef) {
+            var xobjects: CGPDFDictionaryRef?
+            guard CGPDFDictionaryGetDictionary(resources, "XObject", &xobjects), let xobjects else { return }
+            CGPDFDictionaryApplyFunction(xobjects, { _, object, info in
+                guard let info else { return }
+                let scan = Unmanaged<Scan>.fromOpaque(info).takeUnretainedValue()
+                var stream: CGPDFStreamRef?
+                guard CGPDFObjectGetValue(object, .stream, &stream), let stream,
+                      let dict = CGPDFStreamGetDictionary(stream) else { return }
+                var subtype: UnsafePointer<Int8>?
+                guard CGPDFDictionaryGetName(dict, "Subtype", &subtype), let subtype else { return }
+                switch String(cString: subtype) {
+                case "Image":
+                    scan.images += 1
+                case "Form":
+                    // A form can hold images of its own; queue its resources for the next round.
+                    var nested: CGPDFDictionaryRef?
+                    if CGPDFDictionaryGetDictionary(dict, "Resources", &nested), let nested {
+                        scan.queue.append(nested)
+                    }
+                default:
+                    break
+                }
+            }, Unmanaged.passUnretained(scan).toOpaque())
+        }
+
+        for index in 1...document.numberOfPages {
+            guard let page = document.page(at: index), let dict = page.dictionary else { continue }
+            var resources: CGPDFDictionaryRef?
+            if CGPDFDictionaryGetDictionary(dict, "Resources", &resources), let resources {
+                scan.queue.append(resources)
+            }
+        }
+        var rounds = 0
+        while let next = scan.queue.popLast(), rounds < 2000 {
+            rounds += 1
+            enqueueResources(next)
+        }
+        return scan.images
     }
 
     // MARK: Images → PDF

@@ -22,6 +22,7 @@ struct CompressOptions {
         var audioKbps: Int { self == .small ? 128 : 160 }
     }
 
+    var pdfLevel = PDFTools.CompressLevel.balanced
     var imageTarget = ImageTarget.keep
     var imageQuality = 0.75
     var stripMetadata = false
@@ -155,6 +156,12 @@ enum Jobs {
                     try await ff.run(["-i", url.path] + meta + video + ff.aacArgs(kbps: o.videoLevel.audioKbps) + [out.path], progress: progress)
                 }
             }
+        case .pdf:
+            out = Output.destination(for: url, folder: folder, suffix: o.suffix, ext: "pdf")
+            try await cleaningUp(out) {
+                try await Task.detached { try PDFTools.compress(url, to: out, level: o.pdfLevel) }.value
+            }
+            progress(1)
         default:
             throw AppError("Unsupported file type")
         }

@@ -22,7 +22,7 @@ No accounts, no uploads, no subscriptions — everything runs on your Mac.
 
 | Tool | What it's for |
 |---|---|
-| **Compress** | Makes photos and videos take less space while keeping the same resolution, frame rate and quality settings you choose. Keeps the original if the result isn't actually smaller. |
+| **Compress** | Makes photos, videos **and PDFs** take less space while keeping the same resolution, frame rate and page size. Keeps the original if the result isn't actually smaller. |
 | **Convert** | Photos: JPEG, PNG, HEIC, AVIF, TIFF, GIF, BMP, JPEG 2000, TGA, PSD, OpenEXR. Videos: MP4, MOV, M4V, MKV, WebM, AVI, WMV, FLV, MPEG, TS, OGV, 3GP and animated GIF. When only the container changes, streams are copied with no quality loss. |
 | **Resize & Rotate** | Batch resize, crop to an aspect ratio or custom edges, rotate and flip — with a live before/after preview. |
 | **Trim & Clip** | Cut a section out of a video (lossless fast mode), extract the audio, make a GIF, or save the current frame as an image. |
@@ -37,6 +37,7 @@ No accounts, no uploads, no subscriptions — everything runs on your Mac.
 | **PDF Editor** | Type text anywhere, add sticky notes, rectangles, ellipses, lines, arrows and freehand pen strokes, and highlight, underline or strike through text. Move, recolor, resize, erase and undo. Save in place, save a copy, or export a flattened copy whose markup can't be edited. |
 | **Merge & Split** | Combine PDFs and images into one document, drag pages to reorder, rotate, duplicate, delete, extract a selection or split into parts. |
 | **PDF Convert & OCR** | Images → PDF, PDF → images at any DPI, and OCR that makes scanned PDFs searchable. Text recognition runs on-device. |
+| **Compress PDF** | In the **Compress** tool: re-compresses the photos inside a PDF and scales them to 110–200 dpi, typically cutting an image-heavy PDF to a quarter of its size. Text and vector graphics stay sharp and selectable, comments and form fields stay editable, and page rotation is preserved. |
 
 <div align="center">
 <img src="docs/pdf-editor.png" width="420" alt="PDF editor"> <img src="docs/resize.png" width="420" alt="Resize and rotate">

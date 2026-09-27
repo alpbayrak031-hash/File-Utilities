@@ -1,5 +1,6 @@
 import AppKit
 import CoreText
+import Quartz
 import ImageIO
 import PDFKit
 import UniformTypeIdentifiers
@@ -41,6 +42,77 @@ enum PDFTools {
             ctx.endPage()
         }
         ctx.closePDF()
+    }
+
+    // MARK: Compress
+
+    enum CompressLevel: String, CaseIterable, Identifiable {
+        case high = "High quality"
+        case balanced = "Balanced"
+        case small = "Smallest"
+        var id: Self { self }
+        /// JPEG quality for images inside the PDF, and the resolution they're reduced to.
+        var quality: Double { [.high: 0.8, .balanced: 0.6, .small: 0.45][self]! }
+        var dpi: Int { [.high: 200, .balanced: 150, .small: 110][self]! }
+    }
+
+    /// Recompresses the images inside a PDF. Text and vector graphics stay sharp, annotations stay editable.
+    static func compress(_ src: URL, to dst: URL, level: CompressLevel) throws {
+        guard let source = PDFDocument(url: src) else { throw AppError("Can't open this PDF") }
+        guard !source.isLocked else { throw AppError("This PDF is password-protected") }
+        guard let content = CGPDFDocument(src as CFURL), content.numberOfPages > 0 else {
+            throw AppError("Can't read this PDF")
+        }
+        let filterProperties: [AnyHashable: Any] = [
+            "Name": "File Utilities Compress",
+            "FilterType": 1,
+            "Domains": ["Applications": true, "Printing": true],
+            "FilterData": ["ColorSettings": ["ImageSettings": [
+                "Compression Quality": level.quality,
+                "ImageCompression": "ImageJPEGCompress",
+                "ImageScaleSettings": [
+                    "ImageResolution": level.dpi,
+                    "ImageScaleInterpolate": true,
+                    "ImageSizeMax": 4000,
+                    "ImageSizeMin": 0,
+                ],
+            ]]],
+        ]
+        guard let filter = QuartzFilter(properties: filterProperties) else { throw AppError("Couldn't set up PDF compression") }
+
+        var defaultBox = CGRect(x: 0, y: 0, width: 612, height: 792)
+        guard let ctx = CGContext(dst as CFURL, mediaBox: &defaultBox, nil) else { throw AppError("Couldn't create the PDF") }
+        filter.apply(to: ctx)
+        var rotations: [Int] = []
+        for index in 1...content.numberOfPages {
+            try Task.checkCancellation()
+            guard let page = content.page(at: index) else { continue }
+            let crop = page.getBoxRect(.cropBox)
+            rotations.append(Int(page.rotationAngle))
+            // Draw the page upright: under a rotated transform the filter leaves images untouched.
+            var box = CGRect(origin: .zero, size: crop.size)
+            ctx.beginPage(mediaBox: &box)
+            ctx.saveGState()
+            ctx.translateBy(x: -crop.minX, y: -crop.minY)
+            ctx.drawPDFPage(page)
+            ctx.restoreGState()
+            ctx.endPage()
+        }
+        ctx.closePDF()
+
+        // Restore each page's rotation and move the annotations across so they stay editable.
+        guard let result = PDFDocument(url: dst) else { throw AppError("Couldn't finish the PDF") }
+        for index in 0..<result.pageCount {
+            guard let page = result.page(at: index) else { continue }
+            if index < rotations.count { page.rotation = rotations[index] }
+            guard let original = source.page(at: index) else { continue }
+            for annotation in original.annotations {
+                original.removeAnnotation(annotation)
+                page.addAnnotation(annotation)
+            }
+        }
+        result.documentAttributes = source.documentAttributes
+        guard result.write(to: dst) else { throw AppError("Couldn't save the compressed PDF") }
     }
 
     // MARK: Images → PDF

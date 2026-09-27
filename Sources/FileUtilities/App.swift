@@ -92,7 +92,7 @@ final class AppState {
     var selection: Tool? = .compress
     var ffmpegAvailable = FFmpeg.shared.isAvailable
 
-    let compress = BatchModel(accepted: [.image, .video])
+    let compress = BatchModel(accepted: [.image, .video, .pdf])
     var compressOptions = CompressOptions()
 
     let convert = BatchModel(accepted: [.image, .video])

@@ -8,10 +8,10 @@ struct CompressView: View {
     @Bindable var app: AppState
 
     var body: some View {
-        ToolLayout(title: "Compress", subtitle: "Make photos and videos smaller — same resolution, same frame rate.",
+        ToolLayout(title: "Compress", subtitle: "Make photos, videos and PDFs smaller — same resolution, same page size.",
                    icon: Tool.compress.icon) {
-            BatchListView(model: app.compress, hint: "Drop photos and videos here",
-                          detail: "JPEG, HEIC, PNG, TIFF, MP4, MOV and more. Folders work too.")
+            BatchListView(model: app.compress, hint: "Drop photos, videos and PDFs here",
+                          detail: "JPEG, HEIC, PNG, TIFF, MP4, MOV, PDF and more. Folders work too.")
         } side: {
             Form {
                 Section("Photos") {
@@ -29,6 +29,12 @@ struct CompressView: View {
                         ForEach(CompressOptions.Level.allCases) { Text($0.rawValue).tag($0) }
                     }
                     Caption("HEVC files are typically 40–50% smaller than H.264 at the same quality and play everywhere on Apple devices.")
+                }
+                Section("PDFs") {
+                    Picker("Quality", selection: $app.compressOptions.pdfLevel) {
+                        ForEach(PDFTools.CompressLevel.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    Caption("Photos inside the PDF are re-compressed and scaled down to \(app.compressOptions.pdfLevel.dpi) dpi. Text stays sharp and selectable, and comments stay editable.")
                 }
                 Section("Options") {
                     Toggle("Remove metadata (EXIF, location)", isOn: $app.compressOptions.stripMetadata)
